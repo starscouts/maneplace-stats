@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ManePlace Timelapse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        window.onload = (async () => {
+            document.getElementById("load-message").innerText = "Loading... (frames metadata)";
+
+            let _pre = JSON.parse(await (await window.fetch("metadata.json")).text());
+            window.data = {
+                positions: Object.keys(_pre).map(i => parseFloat(i)),
+                timestamps: Object.values(_pre)
+            }
+
+            document.getElementById("load-message").innerText = "Loading... (video media)";
+
+            let _video;
+            if (navigator.userAgent.includes("Firefox/")) {
+                _video = await (await window.fetch("video.webm")).blob();
+            } else {
+                _video = await (await window.fetch("video.mp4")).blob();
+            }
+
+            let url = URL.createObjectURL(_video);
+
+            document.getElementById("load-message").innerText = "Loading... (video players)";
+            document.getElementById("video").src = url;
+
+            window._loading = setInterval(() => {
+                try {
+                    document.getElementById("video").currentTime = document.getElementById("video").duration;
+                } catch (e) {
+                    return;
+                }
+
+                clearInterval(window._loading);
+                document.getElementById("video-mobile").src = url;
+                document.getElementById("tooltip-player").src = url;
+
+                document.getElementById("load-message").innerText = "Loading... (tick processing)";
+                setInterval(() => {
+                    if (document.getElementById("video").paused) {
+                        document.getElementById("action-play").style.display = "";
+                        document.getElementById("action-pause").style.display = "none";
+                    } else {
+                        document.getElementById("action-play").style.display = "none";
+                        document.getElementById("action-pause").style.display = "";
+                    }
+
+                    document.getElementById("seekbar-inner-current").style.width = ((document.getElementById("video").currentTime / document.getElementById("video").duration) * 100) + "%";
+
+                    if (window.data.positions.includes(document.getElementById("video").currentTime)) {
+                        document.getElementById("debug-timestamp").innerText = document.getElementById("video").currentTime.toFixed(3) + "(" + document.getElementById("video").currentTime.toFixed(3) + ") -> " + window.data.timestamps[window.data.positions.indexOf(document.getElementById("video").currentTime)];
+                        let date = new Date(window.data.timestamps[window.data.positions.indexOf(document.getElementById("video").currentTime)]);
+                        document.getElementById("title-timestamp").innerText = date.toDateString().split(" ")[1] + " " + date.getDate() + " " + date.toTimeString().split(" ")[0];
+                    } else {
+                        let positions = [...window.data.positions];
+                        let closest = positions.sort((a, b) => { return ((a - document.getElementById("video").currentTime) + (b - document.getElementById("video").currentTime)) / 2; })[0];
+
+                        document.getElementById("debug-timestamp").innerText = document.getElementById("video").currentTime.toFixed(3) + "*(" + closest.toFixed(3) + ") -> " + window.data.timestamps[window.data.positions.indexOf(closest)];
+                        let date = new Date(window.data.timestamps[window.data.positions.indexOf(closest)]);
+                        document.getElementById("title-timestamp").innerText = date.toDateString().split(" ")[1] + " " + date.getDate() + " " + date.toTimeString().split(" ")[0];
+                    }
+                })
+
+                window.dragging = false;
+
+                document.getElementById("load-message").innerText = "Loading... (events listeners)";
+                document.getElementById("seekbar").onmousemove = document.getElementById("seekbar").ontouchmove = (event) => {
+                    document.getElementById("seekbar-dot").style.marginLeft = event.offsetX + "px";
+                    document.getElementById("seekbar-tooltip").style.marginLeft = ((event.offsetX - (document.getElementById("seekbar-tooltip").clientWidth / 2)) + 7) + "px";
+
+                    let timestamp = 0;
+                    if (window.data.positions.includes(document.getElementById("video").duration * (event.offsetX / document.getElementById("seekbar").clientWidth))) {
+                        timestamp = window.data.timestamps[window.data.positions.indexOf(document.getElementById("video").duration * (event.offsetX / document.getElementById("seekbar").clientWidth))];
+                    } else {
+                        let positions = [...window.data.positions];
+                        let closest = positions.sort((a, b) => { return ((a - document.getElementById("video").duration * (event.offsetX / document.getElementById("seekbar").clientWidth)) + (b - document.getElementById("video").duration * (event.offsetX / document.getElementById("seekbar").clientWidth))) / 2; })[0];
+
+                        timestamp = window.data.timestamps[window.data.positions.indexOf(closest)];
+                    }
+
+                    let date = new Date(timestamp);
+                    document.getElementById("tooltip-text").innerText = date.toDateString().split(" ")[1] + " " + date.getDate() + " " + date.toTimeString().split(" ")[0];
+                    document.getElementById("tooltip-player").currentTime = document.getElementById("video").duration * (event.offsetX / document.getElementById("seekbar").clientWidth);
+
+                    if (window.dragging) {
+                        document.getElementById("video").currentTime = document.getElementById("video").duration * (event.offsetX / document.getElementById("seekbar").clientWidth);
+                    }
+                }
+
+                document.getElementById("seekbar").onmousedown = () => {
+                    window.dragging = true;
+                }
+
+                document.getElementById("seekbar").onmouseup = document.getElementById("seekbar").onmouseleave = document.onmouseleave = () => {
+                    window.dragging = false;
+                }
+
+                document.getElementById("seekbar").onclick = (event) => {
+                    document.getElementById("video").currentTime = document.getElementById("video").duration * (event.offsetX / document.getElementById("seekbar").clientWidth);
+                }
+
+                document.getElementById("seekbar").onmouseenter = document.getElementById("seekbar").ontouchstart = () => {
+                    document.getElementById("seekbar-dot").style.display = "";
+                    document.getElementById("seekbar-tooltip").style.display = "";
+                    document.getElementById("seekbar-tooltip").style.marginTop = "-205px";
+                }
+
+                document.getElementById("seekbar").onmouseleave = document.getElementById("seekbar").ontouchend = () => {
+                    document.getElementById("seekbar-dot").style.display = "none";
+                    document.getElementById("seekbar-tooltip").style.display = "none";
+                }
+
+                document.getElementById("load-message").innerText = "Loading... (interface)";
+                document.getElementById("loader").style.display = "none";
+                document.getElementById("app").style.display = "";
+            })
+        })
+
+        function unviewFrame() {
+            document.getElementById("title-normal").style.display = "";
+            document.getElementById("title-frame").style.display = "none";
+            document.getElementById("controls").style.display = "";
+            document.getElementById("video").style.display = "block";
+            document.getElementById("frame").style.display = "none";
+        }
+
+        function viewFrame() {
+            document.getElementById("frame").style.width = "400vw";
+            document.getElementById("title-normal").style.display = "none";
+            document.getElementById("title-frame").style.display = "";
+            document.getElementById("controls").style.display = "none";
+            document.getElementById("video").style.display = "none";
+            document.getElementById("frame").style.display = "";
+
+            let context = document.getElementById("frame-generator").getContext('2d');
+            context.drawImage(document.getElementById("video"), 0, 0, 1000, 1000);
+            document.getElementById("frame").src = document.getElementById("frame-generator").toDataURL();
+
+            if (!document.getElementById("video").paused) document.getElementById("video").pause();
+        }
+    </script>
+    <style>
+        * {
+            user-select: none;
+        }
+
+        .action-button {
+            display: inline-block;
+        }
+
+        .action-button * {
+            pointer-events: none;
+        }
+
+        .action-button:hover {
+            transform: scale(.9) !important;
+            opacity: .75;
+        }
+
+        .action-button:active {
+            transform: scale(.8) !important;
+            opacity: .5;
+        }
+
+        .mobile-only {
+            display: none;
+        }
+
+        @media (max-width: 700px) {
+            .desktop-only {
+                display: none;
+            }
+
+            .mobile-only {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <br>
+        <br>
+
+        <div id="loader" class="container">
+            <h1>ManePlace Timelapse</h1>
+            <p id="load-message">This page requires JavaScript to be enabled on your browser, please enable JavaScript and reload this page.</p>
+            <script>
+                document.getElementById("load-message").innerText = "Loading... (frames metadata)";
+            </script>
+        </div>
+
+        <div id="app" style="display: none;">
+            <div class="container">
+                <h1 id="title-normal">ManePlace Timelapse <small class="desktop-only"><small><span class="desktop-only">(</span><span id="debug-timestamp" class="font-monospace" style="display: none;">-</span><span id="title-timestamp">-</span><span class="desktop-only">; <a href="#" onclick="viewFrame();">view this frame</a>)</span></small></small></h1>
+                <h1 id="title-frame" style="display:none;">ManePlace Timelapse <small class="desktop-only"><small><span class="desktop-only">(scroll to see the frame; <a href="#" onclick="unviewFrame();">back to timelapse</a>)</span></small></small></h1>
+            </div>
+
+            <div class="mobile-only container">
+                <video id="video-mobile" src="" autoplay muted controls style="width: 100%; border-radius: 10px; outline: 1px solid rgba(0, 0, 0, .1)"></video>
+
+                <div class="alert alert-warning">
+                    Open this page on a computer to get a better experience. Enhanced seeking, frame dates, and more are available only on computers.
+                </div>
+            </div>
+
+            <div class="desktop-only">
+                <video id="video" src="" style="margin-left: auto; margin-right: auto; height: calc(100vh - 172px); display: block;" autoplay muted></video>
+                <img id="frame" style="image-rendering: pixelated; display: none;">
+                <canvas id="frame-generator" style="display: none;" width="1000" height="1000"></canvas>
+
+                <div style="height:48px; margin-top: 10px;" id="controls" class="container">
+                    <a onclick="document.getElementById('video').pause();" id="action-pause" style="cursor: pointer; transition: transform 200ms; transform: scale(1); display: inline-block;" class="action-button" title="Pause">
+                        <img src="pause.svg" alt="Pause">
+                    </a>
+                    <a onclick="document.getElementById('video').play();" id="action-play" style="display: none; cursor: pointer; transition: transform 200ms; transform: scale(1);" class="action-button" title="Play">
+                        <img src="play.svg" alt="Play">
+                    </a>
+                    <div id="seekbar" style="cursor: pointer; display: inline-block; height: 8px; width: calc(100% - 54px); border-radius: 999px; padding: 10px 0;">
+                        <div id="seekbar-inner" style="background: rgba(0, 0, 0, .1); height: 8px; border-radius: 999px; display: inline-block; width: 100%; position: relative;">
+                            <div id="seekbar-inner-current" style="background: rgba(0, 0, 0, .1); height: 8px; border-radius: 999px; display: inline-block; width: 0; position: absolute;"></div>
+                        </div>
+                        <div id="seekbar-dot" style="display: none; position: relative; width: 16px; height: 16px; top: -18px; background: #ccc; border-radius: 999px; margin-left: 0; pointer-events: none;"></div>
+                        <div id="seekbar-tooltip" style="backdrop-filter: blur(10px); pointer-events: none; display: none; position: absolute; background: rgba(0, 0, 0, .1); padding: 1px; border-radius: 10px;">
+                            <video id="tooltip-player" src="" style="width: 128px; border-radius: 10px;"></video>
+                            <div id="tooltip-text" style="text-align: center;">
+                                Tooltip
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

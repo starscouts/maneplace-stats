@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ManePlace has ended</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
+    <style>
+        #ee-1 {
+            display: none;
+        }
+
+        #ee-0:hover #ee-1 {
+            display: inline;
+        }
+    </style>
+</head>
+<body>
+    <div style="background-image: url('https://place.manechat.net/canvas-image');">
+        <div class="text-white pt-5 pb-5" style="backdrop-filter: blur(5px); background-color: rgba(0, 0, 0, .5);">
+            <div class="container">
+                <h1>ManePlace has closed</h1>
+                <p id="close-date">On January 1st 2023 at 12pm UTC</p>
+                <script>
+                    function timeAgo(time) {
+                        if (!isNaN(parseInt(time))) {
+                            time = new Date(time).getTime();
+                        }
+
+                        let periods = ["second", "minute", "hour", "day", "week", "month", "year", "age"];
+
+                        let lengths = ["60", "60", "24", "7", "4.35", "12", "100"];
+
+                        let now = new Date().getTime();
+
+                        let difference = Math.round((now - time) / 1000);
+                        let tense;
+                        let period;
+
+                        if (difference <= 10 && difference >= 0) {
+                            return "now";
+                        } else if (difference > 0) {
+                            tense = "ago";
+                        } else {
+                            tense = "later";
+                        }
+
+                        let j;
+
+                        for (j = 0; difference >= lengths[j] && j < lengths.length - 1; j++) {
+                            difference /= lengths[j];
+                        }
+
+                        difference = Math.round(difference);
+
+                        period = periods[j];
+
+                        return `${difference} ${period}${difference > 1 ? "s" : ""} ${tense}`;
+                    }
+
+                    setInterval(() => {
+                        document.getElementById("close-date").innerText = timeAgo(new Date("2023-01-01T12:00:00.000Z"))
+                    }, 500);
+
+                    document.getElementById("close-date").innerText = timeAgo(new Date("2023-01-01T12:00:00.000Z"))
+                </script>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <br><br>
+        <p>Huge thanks to the 350 people who placed over 600k pixels over the course of only 3 months. And thanks to all of the artists who ended on ManePlace, especially the ones who made original art for ManePlace. Maybe <span title="Yes">there will be something big next year</span>, who knows... You can now find statistics, a timelapse (as some of you asked) and the old template generator, right here:</p>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); grid-gap: 20px;">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Statistics</h4>
+                    <p>Get all sorts of information about ManePlace, such as the most placed colors and the most active users.</p>
+                    <a class="btn btn-primary" href="/stats">View</a>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Timelapse</h4>
+                    <p>Get a replay of ManePlace over time, from the first day up until the very last one.</p>
+                    <a class="btn btn-primary" href="/timelapse">View</a>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Template Generator</h4>
+                    <p>For archival purposes — A tool to generate templates that use the ManePlace color palette.</p>
+                    <a class="btn btn-primary" href="/template">View</a>
+                </div>
+            </div>
+        </div>
+
+        <p style="margin-top: 20px;" class="text-muted">Thanks to Equestria.dev (<span id="ee-0">Leah Cloudburst<span id="ee-1"> (cutieeeee!)</span></span> and Mia Raindrops) for developing and managing ManePlace, and thanks to the Manechat moderator team for making ManePlace possible. If you wish to support or help with future ManePlace development, you can <a href="https://equestria.horse/contact/" target="_blank">contact us</a>.</p>
+    </div>
+</body>
+</html>

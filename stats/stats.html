@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ManePlace Stats</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://static.equestria.horse/ponies/editor/fuse.js"></script>
+    <script>
+        window.data = JSON.parse(`%DATA%`);
+        window.second = parseInt("%SECOND%") + 10;
+
+        function pad(num, size) {
+            var s = num+"";
+            while (s.length < size) s = "0" + s;
+            return s;
+        }
+
+        function blink(id) {
+            document.getElementById("home-stats-" + id).style.color = "var(--bs-warning)";
+
+            setTimeout(() => {
+                document.getElementById("home-stats-" + id).style.color = "black";
+            }, 250);
+        }
+
+        let ws;
+        let oldStats1 = null;
+        let oldStats2 = null;
+        let oldStats3 = null;
+
+        function liveStats() {
+            ws = new WebSocket("wss://place.manechat.net/_ws")
+
+            ws.onopen = (event) => {
+                console.log(event);
+            }
+
+            ws.onmessage = (event) => {
+                console.log(event);
+                let data = JSON.parse(event.data);
+
+                if (oldStats1 === null) oldStats1 = data['pixels'];
+                if (oldStats2 === null) oldStats2 = data['users'];
+                if (oldStats3 === null) oldStats3 = data['average'];
+
+                document.getElementById("home-stats-1").innerText = data['pixels'];
+                document.getElementById("home-stats-2").innerText = data['users'];
+                document.getElementById("home-stats-3").innerText = data['average'];
+
+                if (oldStats1 !== data['pixels']) {
+                    blink(1);
+                    oldStats1 = data['pixels'];
+                }
+
+                if (oldStats2 !== data['users']) {
+                    blink(2);
+                    oldStats2 = data['users'];
+                }
+
+                if (oldStats3 !== data['average']) {
+                    blink(3);
+                    oldStats3 = data['average'];
+                }
+            }
+
+            ws.onclose = (event) => {
+                console.log(event);
+                liveStats();
+            }
+        }
+
+        liveStats();
+    </script>
+
+    <style>
+        @media (max-width: 800px) {
+            #users-grid, #home-stats {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        #home-stats-1, #home-stats-2, #home-stats-3 {
+            transition: color 250ms;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <br>
+    <br>
+    <h1 style="text-align: center;">ManePlace Stats</h1>
+    <p style="text-align: center;">(<span onclick="document.getElementById('colors-time').style.display='';">all</span> times are in <span id="timezone">your local timezone</span>; <span onclick="window.second = Infinity;">last</span> update: %DATE%<span id="refresher" style="display: none;">, refreshing in <span id="refresh-seconds">X</span> seconds</span>)</p>
+    <div class="alert-secondary alert">
+        ManePlace will close around <b id="close-date">-</b> (this is an estimation, may change over time, only developers can decide when ManePlace actually closes)
+    </div>
+    <script>
+        document.getElementById("close-date").innerText = new Date(window.data.ai.estimatedClose).getTime() < new Date().getTime() ? "never/unable to calculate" : new Date(window.data.ai.estimatedClose).toDateString();
+
+        try {
+            document.getElementById("timezone").innerText = new Date().toString().split("(")[1].split(")")[0];
+        } catch (e) {
+            document.getElementById("timezone").innerText = "your local timezone";
+        }
+
+        setInterval(() => {
+            let seconds = window.second - new Date().getUTCSeconds();
+            document.getElementById("refresh-seconds").innerText = seconds.toString();
+
+            if (seconds < 0) {
+                document.getElementById("refresher").style.display = "none";
+            } else if (seconds > 0) {
+                document.getElementById("refresher").style.display = "";
+            } else if (seconds === 0) {
+                document.getElementById("refresher").style.display = "none";
+                location.reload();
+            }
+        }, 500);
+    </script>
+
+    <div id="home-stats" style="display: grid; grid-template-columns: repeat(3, 1fr);">
+        <div>
+            <h2 style="text-align: center;" id="home-stats-1">-</h2>
+            <h5 style="text-align: center;">pixels placed so far</h5>
+        </div>
+        <div>
+            <h2 style="text-align: center;" id="home-stats-2">-</h2>
+            <h5 style="text-align: center;">unique users</h5>
+        </div>
+        <div>
+            <h2 style="text-align: center;" id="home-stats-3">-</h2>
+            <h5 style="text-align: center;">pixels per user</h5>
+        </div>
+    </div>
+
+    <script>
+
+    </script>
+
+    <hr>
+    <h3>Colors by amount of pixels placed</h3>
+    <canvas id="graph-00" style="width: 100%; height: 300px; max-height: 100%;"></canvas>
+    <script>
+        const ctx0 = document.getElementById('graph-00').getContext('2d');
+        window.colorData = {
+            label: "Pixels placed",
+            data: window.data.colors.values,
+            backgroundColor: window.data.colors.names.filter(i => i !== null).map((i) => i.hex + "33"),
+            borderColor: window.data.colors.names.filter(i => i !== null).map((i) => i.hex),
+            borderWidth: 1
+        };
+        const graph0 = new Chart(ctx0, {
+            type: 'bar',
+            data: {
+                labels: window.data.colors.titles.map((i) => window.data.colors.names[i].name),
+                datasets: [
+                    window.colorData
+                ]
+            },
+            options: {
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                elements: {
+                    point:{
+                        radius: 0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    </script>
+
+    <div id="colors-time">
+        <br>
+        <h3>Colors placed over time</h3>
+        <canvas id="graph-06" style="width: 100%; height: 300px; max-height: 100%;"></canvas>
+        <script>
+            const ctx6 = document.getElementById('graph-06').getContext('2d');
+            window.colorTimeData = window.data.colorsTime.titles.filter(i => i !== null).map((j) => { return {
+                label: window.data.colors.names[j].name,
+                data: Object.values(window.data.colorsTime.values[j]),
+                borderColor: window.data.colors.names[j].hex
+            }; });
+            const graph6 = new Chart(ctx6, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(window.data.colorsTime.values[0]).map((i) => new Date(i).getDate() + " " + new Date(i).toDateString().split(" ")[1] + " " + new Date(i).toTimeString().split(" ")[0].substring(0, 5)),
+                    datasets: window.colorTimeData
+                },
+                options: {
+                    animation: {
+                        duration: 0
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    elements: {
+                        point:{
+                            radius: 0
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            intersect: false
+                        }
+                    }
+                }
+            });
+        </script>
+    </div>
+
+    <br>
+    <h3>Most active users (all time)</h3>
+    <div class="alert alert-primary"><b>Do not talk about your pixel counts on Manechat.</b> This goes against the spirit of the event and you may lose canvas access if you continuously mention it.</div>
+
+    <input class="form-control" placeholder="Search for a user..." id="search" spellcheck="false" style="margin-bottom: 10px;">
+
+    <div id="search-prompt"></div>
+    <div id="search-results" class="list-group" style="display: none;"></div>
+    <div id="search-options" class="list-group" style="display: none;"></div>
+    <script>
+        let dom = "";
+        let dom2 = "";
+
+        for (let index in Object.keys(window.data.users.names)) {
+            let id = Object.keys(window.data.users.names)[index];
+            let name = window.data.users.names[id];
+            let count = window.data.users.values[index];
+            let color = window.data.users.pixelColors[id][0];
+
+            dom += `
+                <div id="search-result-${id}" onclick="userModal('${id}');" class="list-group-item list-group-item-action" style="display: grid; grid-template-columns: repeat(3, 1fr); cursor: pointer;" data-bs-toggle="modal" data-bs-target="#user-modal">
+                    <div><b>${name.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("&", "&amp;")}</b></div>
+                    <div>${count}</div>
+                    <div><span style="display: inline-block; width: 16px; height: 16px; vertical-align: middle; border-radius: 999px; background-color: ${color.color}"></span> <span style="vertical-align: middle;">${color.name} (${((color.value / count) * 100).toFixed(2)}%)</span></div>
+                </div>
+                `;
+
+            if (index < 30) {
+            dom2 += `
+                <div id="search-result-${id}" onclick="userModal('${id}');" class="list-group-item list-group-item-action" style="display: grid; grid-template-columns: repeat(3, 1fr); cursor: pointer;" data-bs-toggle="modal" data-bs-target="#user-modal">
+                    <div><b>${name.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("&", "&amp;")}</b></div>
+                    <div>${count}</div>
+                    <div><span style="display: inline-block; width: 16px; height: 16px; vertical-align: middle; border-radius: 999px; background-color: ${color.color}"></span> <span style="vertical-align: middle;">${color.name} (${((color.value / count) * 100).toFixed(2)}%)</span></div>
+                </div>
+                `;
+            }
+        }
+
+        document.getElementById("search-options").innerHTML = dom;
+        document.getElementById("search-prompt").innerHTML = dom2;
+        window.searchData = Object.keys(window.data.users.names).map((i) => { return {
+            id: i,
+            name: window.data.users.names[i]
+        } })
+        // noinspection JSUnresolvedFunction
+        const fuse = new Fuse(searchData, {
+            keys: [
+                { name: "id", weight: 0.25 },
+                { name: "name", weight: 1 }
+            ]
+        })
+
+        function search() {
+            let query = document.getElementById("search").value.trim();
+
+            if (query !== "") {
+                document.getElementById("search-prompt").style.display = "none";
+                document.getElementById("search-results").style.display = "";
+            } else {
+                document.getElementById("search-prompt").style.display = "";
+                document.getElementById("search-results").style.display = "none";
+            }
+
+            let items = fuse.search(query).map(i => i.item.id);
+            let dom = "";
+
+            for (let item of items) {
+                dom += document.getElementById("search-result-" + item).outerHTML;
+            }
+
+            document.getElementById("search-results").innerHTML = dom;
+        }
+
+        document.getElementById("search").value = "";
+        document.getElementById("search").onchange = document.getElementById("search").onkeyup = document.getElementById("search").onkeydown = search;
+    </script>
+
+    <br>
+    <h3>Most active users (today)</h3>
+    <div class="alert alert-primary"><b>ManePlace is not a competition:</b> these statistics are provided simply because they're interesting, not to make this a competition. Please don't try to make it one.</div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); grid-column-gap: 20px; grid-row-gap: 20px; margin-bottom: 10px;" id="users2-grid">
+        <div id="user2-gold" style="text-align: center; background-color: #e3ca4d; border-radius: 10px; padding: 10px;">
+            -
+        </div>
+        <div id="user2-silver" style="text-align: center; background-color: #cdcdcd; border-radius: 10px; padding: 10px;">
+            -
+        </div>
+        <div id="user2-bronze" style="text-align: center; background-color: #e69134; border-radius: 10px; padding: 10px;">
+            -
+        </div>
+
+        <script>
+            let user2Gold = window.data.usersToday.titles[0], user2Silver = window.data.usersToday.titles[1], user2Bronze = window.data.usersToday.titles[2];
+            let lastTen = window.data.usersTen.users[window.data.usersTen.users.length - 1];
+            let user2GoldLast10 = lastTen.includes(user2Gold), user2SilverLast10 = lastTen.includes(user2Silver), user2BronzeLast10 = lastTen.includes(user2Bronze);
+
+            document.getElementById("user2-gold").innerText = window.data.usersToday.names[user2Gold];
+            if (user2GoldLast10) document.getElementById("user2-gold").innerHTML += " <span data-bs-toggle='tooltip' title='This user was active in the last 10 minutes'>🔥</span>";
+
+            document.getElementById("user2-silver").innerText = window.data.usersToday.names[user2Silver];
+            if (user2SilverLast10) document.getElementById("user2-silver").innerHTML += " <span data-bs-toggle='tooltip' title='This user was active in the last 10 minutes'>🔥</span>";
+
+            document.getElementById("user2-bronze").innerText = window.data.usersToday.names[user2Bronze];
+            if (user2BronzeLast10) document.getElementById("user2-bronze").innerHTML += " <span data-bs-toggle='tooltip' title='This user was active in the last 10 minutes'>🔥</span>";
+        </script>
+    </div>
+    <canvas id="graph-10" style="width: 100%; height: 300px; max-height: 100%;"></canvas>
+    <script>
+        const ctx10 = document.getElementById('graph-10').getContext('2d');
+        window.usersTodayData = {
+            label: "Pixels placed",
+            data: window.data.usersToday.values,
+            backgroundColor: Object.values(window.data.usersToday.colors).map((i) => i + "55"),
+            borderColor: Object.values(window.data.usersToday.colors),
+            borderWidth: 1
+        };
+        const graph10 = new Chart(ctx10, {
+            type: 'bar',
+            data: {
+                labels: window.data.usersToday.titles.map((i) => {
+                    return JSON.stringify({
+                        id: i,
+                        name: window.data.usersToday.names[i]
+                    });
+                }),
+                datasets: [
+                    window.usersTodayData
+                ]
+            },
+            options: {
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    },
+                    x: {
+                        ticks: {
+                            callback: function(label) {
+                                return window.data.usersToday.names[window.data.usersToday.titles[label]];
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    point:{
+                        radius: 0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(tooltipItem) {
+                                let add = "";
+
+                                if (window.data.usersTen.users[window.data.usersTen.users.length - 1].includes(JSON.parse(tooltipItem[0].label).id)) {
+                                    add = "🔥";
+                                }
+
+                                return JSON.parse(tooltipItem[0].label).name + add;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+
+    <br>
+    <h3>Active users every hour</h3>
+    <canvas id="graph-08" style="width: 100%; height: 300px; max-height: 100%;"></canvas>
+    <script>
+        const ctx8 = document.getElementById('graph-08').getContext('2d');
+        window.activeHoursData = {
+            label: "Users",
+            data: window.data.usersHours.values,
+            borderColor: "#000000"
+        };
+        const graph8 = new Chart(ctx8, {
+            type: 'line',
+            data: {
+                labels: window.data.usersHours.titles.map((i) => new Date(i).getDate() + " " + new Date(i).toDateString().split(" ")[1] + " " + new Date(i).toTimeString().split(" ")[0].substring(0, 5)),
+                datasets: [
+                    window.activeHoursData
+                ]
+            },
+            options: {
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                elements: {
+                    point:{
+                        radius: 0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        intersect: false
+                    }
+                }
+            }
+        });
+    </script>
+
+    <br>
+    <h3>Active users every 10 minutes</h3>
+    <canvas id="graph-09" style="width: 100%; height: 300px; max-height: 100%;"></canvas>
+    <script>
+        const ctx9 = document.getElementById('graph-09').getContext('2d');
+        window.activeTensData = {
+            label: "Users",
+            data: window.data.usersTen.values,
+            borderColor: "#000000"
+        };
+        const graph9 = new Chart(ctx9, {
+            type: 'line',
+            data: {
+                labels: window.data.usersTen.titles.map((i) => new Date(i).getDate() + " " + new Date(i).toDateString().split(" ")[1] + " " + new Date(i).toTimeString().split(" ")[0].substring(0, 5)),
+                datasets: [
+                    window.activeTensData
+                ]
+            },
+            options: {
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                elements: {
+                    point:{
+                        radius: 0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        intersect: false
+                    }
+                }
+            }
+        });
+    </script>
+
+    <br>
+    <h3>Unique users over time</h3>
+    <canvas id="graph-05" style="width: 100%; height: 300px; max-height: 100%;"></canvas>
+    <script>
+        const ctx5 = document.getElementById('graph-05').getContext('2d');
+        window.uniquesData = {
+            label: "Users",
+            data: window.data.uniques.values,
+            borderColor: "#000000"
+        };
+        const graph5 = new Chart(ctx5, {
+            type: 'line',
+            data: {
+                labels: window.data.uniques.titles.map((i) => new Date(i).getDate() + " " + new Date(i).toDateString().split(" ")[1] + " " + new Date(i).toTimeString().split(" ")[0].substring(0, 5)),
+                datasets: [
+                    window.uniquesData
+                ]
+            },
+            options: {
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                elements: {
+                    point:{
+                        radius: 0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        intersect: false
+                    }
+                }
+            }
+        });
+    </script>
+
+    <br>
+    <h3>New users over time</h3>
+    <canvas id="graph-07" style="width: 100%; height: 300px; max-height: 100%;"></canvas>
+    <script>
+        const ctx7 = document.getElementById('graph-07').getContext('2d');
+        window.newData = {
+            label: "Users",
+            data: window.data.new.values,
+            borderColor: "#000000"
+        };
+        const graph7 = new Chart(ctx7, {
+            type: 'line',
+            data: {
+                labels: window.data.new.titles.map((i) => new Date(i).getDate() + " " + new Date(i).toDateString().split(" ")[1] + " " + new Date(i).toTimeString().split(" ")[0].substring(0, 5)),
+                datasets: [
+                    window.newData
+                ]
+            },
+            options: {
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                elements: {
+                    point:{
+                        radius: 0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        intersect: false
+                    }
+                }
+            }
+        });
+    </script>
+
+    <br>
+    <h3>Pixels placed every 10 minutes</h3>
+    <canvas id="graph-01" style="width: 100%; height: 300px; max-height: 100%;"></canvas>
+    <script>
+        const ctx1 = document.getElementById('graph-01').getContext('2d');
+        const graph1 = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: window.data.tenMinutes.titles.map((i) => new Date(i).getDate() + " " + new Date(i).toDateString().split(" ")[1] + " " + new Date(i).toTimeString().split(" ")[0].substring(0, 5)),
+                datasets: [{
+                    label: 'Pixels placed',
+                    data: window.data.tenMinutes.values,
+                    borderColor: 'black'
+                }]
+            },
+            options: {
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    },
+                    x: {
+                        gridLines: {
+                            display: false
+                        },
+                        grid: {
+                            display: false
+                        },
+                        gridLineWidth: 0
+                    }
+                },
+                elements: {
+                    point:{
+                        radius: 0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        intersect: false
+                    }
+                }
+            }
+        });
+    </script>
+
+    <br>
+    <h3>Pixels placed every minute</h3>
+    <canvas id="graph-02" style="width: 100%; height: 300px; max-height: 100%;"></canvas>
+    <script>
+        const ctx2 = document.getElementById('graph-02').getContext('2d');
+        const graph2 = new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: window.data.minutes.titles.map((i) => new Date(i).getDate() + " " + new Date(i).toDateString().split(" ")[1] + " " + new Date(i).toTimeString().split(" ")[0].substring(0, 5)),
+                datasets: [{
+                    label: 'Pixels placed',
+                    data: window.data.minutes.values,
+                    borderColor: 'black'
+                }]
+            },
+            options: {
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    },
+                    x: {
+                        gridLines: {
+                            display: false
+                        },
+                        grid: {
+                            display: false
+                        },
+                        gridLineWidth: 0
+                    }
+                },
+                elements: {
+                    point:{
+                        radius: 0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        intersect: false
+                    }
+                }
+            }
+        });
+    </script>
+
+    <br>
+    <h3>Pixels placed every hour</h3>
+    <canvas id="graph-03" style="width: 100%; height: 300px; max-height: 100%;"></canvas>
+    <script>
+        const ctx3 = document.getElementById('graph-03').getContext('2d');
+        const graph3 = new Chart(ctx3, {
+            type: 'line',
+            data: {
+                labels: window.data.hours.titles.map((i) => new Date(i).getDate() + " " + new Date(i).toDateString().split(" ")[1] + " " + new Date(i).toTimeString().split(" ")[0].substring(0, 5)),
+                datasets: [{
+                    label: 'Pixels placed',
+                    data: window.data.hours.values,
+                    borderColor: 'black'
+                }]
+            },
+            options: {
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    },
+                    x: {
+                        gridLines: {
+                            display: false
+                        },
+                        grid: {
+                            display: false
+                        },
+                        gridLineWidth: 0
+                    }
+                },
+                elements: {
+                    point:{
+                        radius: 0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        intersect: false
+                    }
+                }
+            }
+        });
+    </script>
+
+    <br>
+    <div class="alert-success alert">
+        <b>LittleshyFiM</b> has spent some time on ManePlace. You can check it out <a href="https://www.youtube.com/watch?v=H0Mljf7wntg">right here</a>!
+    </div>
+
+    <br>
+</div>
+
+<script>
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl, { html: true, sanitize: false, animation: true }));
+
+    Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach((item) => {
+        if (!item.classList.contains("tooltip-nohelp")) {
+            item.style.cursor = "help";
+        }
+    })
+
+    window.onload = () => {
+        document.getElementById('colors-time').style.display = 'none';
+    }
+</script>
+
+<div class="modal fade" id="user-modal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">User heatmap for <span id="user-modal-name"></span></h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <img style="width: 100%;" id="user-modal-img">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function userModal(id) {
+        document.getElementById("user-modal-img").src = "./users/" + id + ".png";
+        document.getElementById("user-modal-name").innerText = window.data.users.names[id];
+    }
+</script>
+
+</body>
+</html>

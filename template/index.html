@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ManePlace Template Generator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
+    <script src="./pixelit.min.js"></script>
+
+    <script>
+        window.palettes = {
+            full: [[109, 0, 26], [190, 0, 57], [255, 69, 0], [255, 168, 0], [255, 214, 53], [255, 248, 184], [0, 163, 104], [0, 204, 120], [126, 237, 86], [0, 117, 111], [0, 158, 170], [0, 204, 192], [36, 80, 164], [54, 144, 234], [81, 233, 244], [73, 58, 193], [106, 92, 255], [148, 179, 255], [129, 30, 159], [180, 74, 192], [228, 171, 255], [222, 16, 127], [255, 56, 129], [255, 153, 170], [109, 72, 47], [156, 105, 38], [255, 180, 112], [0, 0, 0], [81, 82, 82], [137, 141, 144], [212, 215, 217], [238, 238, 238], [255, 255, 92], [217, 217, 74], [255, 115, 19], [252, 224, 124], [189, 189, 62], [192, 170, 25], [143, 143, 224], [107, 107, 209], [158, 254, 144], [54, 0, 130], [0, 204, 255], [68, 177, 206], [74, 33, 87], [214, 118, 227], [171, 251, 255], [161, 20, 97], [89, 45, 27], [145, 71, 36], [204, 109, 66], [255, 133, 89], [255, 213, 173], [211, 151, 72], [250, 116, 164], [255, 209, 220], [103, 145, 18], [211, 150, 72], [159, 196, 85], [213, 235, 173], [173, 175, 176], [121, 60, 207], [167, 113, 247], [211, 191, 245]],
+            legacy: [[109, 0, 26], [190, 0, 57], [255, 69, 0], [255, 168, 0], [255, 214, 53], [255, 248, 184], [0, 163, 104], [0, 204, 120], [126, 237, 86], [0, 117, 111], [0, 158, 170], [0, 204, 192], [36, 80, 164], [54, 144, 234], [81, 233, 244], [73, 58, 193], [106, 92, 255], [148, 179, 255], [129, 30, 159], [180, 74, 192], [228, 171, 255], [222, 16, 127], [255, 56, 129], [255, 153, 170], [109, 72, 47], [156, 105, 38], [255, 180, 112], [0, 0, 0], [81, 82, 82], [137, 141, 144], [212, 215, 217], [255, 255, 255], [255, 115, 19], [255, 212, 97], [192, 170, 25], [158, 254, 144], [171, 251, 255], [250, 116, 164], [255, 209, 220], [211, 150, 72]],
+            original: [[109, 0, 26], [190, 0, 57], [255, 69, 0], [255, 168, 0], [255, 214, 53], [255, 248, 184], [0, 163, 104], [0, 204, 120], [126, 237, 86], [0, 117, 111], [0, 158, 170], [0, 204, 192], [36, 80, 164], [54, 144, 234], [81, 233, 244], [73, 58, 193], [106, 92, 255], [148, 179, 255], [129, 30, 159], [180, 74, 192], [228, 171, 255], [222, 16, 127], [255, 56, 129], [255, 153, 170], [109, 72, 47], [156, 105, 38], [255, 180, 112], [0, 0, 0], [81, 82, 82], [137, 141, 144], [212, 215, 217], [255, 255, 255]],
+            reduced: [[190, 0, 57], [255, 168, 0], [255, 214, 53], [0, 163, 104], [0, 158, 170], [36, 80, 164], [73, 58, 193], [180, 74, 192], [255, 56, 129], [156, 105, 38], [0, 0, 0], [137, 141, 144], [255, 255, 255]],
+            grayscale: [[0, 0, 0], [81, 82, 82], [137, 141, 144], [212, 215, 217], [255, 255, 255]]
+        };
+        window.scale = 5;
+        window.palette = "full";
+        window.resolution = -1;
+
+        function openUploader() {
+            document.getElementById("uploader").click();
+        }
+
+        function generate() {
+            document.getElementById("loading").style.display = "";
+            document.getElementById("when-imported").style.display = "none";
+            document.getElementById("settings").style.display = "none";
+            document.getElementById("generated").style.display = "";
+
+            window.px = new pixelit({
+                from: document.getElementById("preview-hidden"),
+                to: document.getElementById("result"),
+                scale: window.scale,
+                palette: window.palettes[window.palette],
+                maxHeight: window.resolution > -1 ? window.resolution : null
+            });
+            px.draw().pixelate().convertPalette().resizeImage();
+
+            document.getElementById("result").toBlob((blob) => {
+                document.getElementById("download").href = URL.createObjectURL(blob);
+                document.getElementById("download").setAttribute("download", "ManePlace-Template-" + ((new Date().getTime() / 1000) - 1664496000).toFixed(0) + ".png");
+            });
+
+            document.getElementById("loading").style.display = "none";
+            document.getElementById("when-imported").style.display = "";
+            document.getElementById("download").style.display = "block";
+        }
+
+        function setCanvasScale(newScale) {
+            window.scale = newScale;
+            Array.from(document.getElementsByClassName("scale-option")).forEach((i) => {
+                i.classList.remove("btn-dark");
+                i.classList.add("btn-outline-dark");
+            });
+
+            document.getElementById("scale-" + newScale).classList.remove("btn-outline-dark");
+            document.getElementById("scale-" + newScale).classList.add("btn-dark");
+        }
+
+        function setResolution(newResolution) {
+            window.resolution = newResolution;
+            Array.from(document.getElementsByClassName("resolution-option")).forEach((i) => {
+                i.classList.remove("btn-dark");
+                i.classList.add("btn-outline-dark");
+            });
+
+            document.getElementById("resolution-" + newResolution).classList.remove("btn-outline-dark");
+            document.getElementById("resolution-" + newResolution).classList.add("btn-dark");
+        }
+
+        function setPalette(newPalette) {
+            switch (newPalette) {
+                case 5:
+                    window.palette = "full";
+                    break;
+
+                case 4:
+                    window.palette = "legacy";
+                    break;
+
+                case 3:
+                    window.palette = "original";
+                    break;
+
+                case 2:
+                    window.palette = "reduced";
+                    break;
+
+                case 1:
+                    window.palette = "grayscale";
+                    break;
+            }
+
+            Array.from(document.getElementsByClassName("palette-option")).forEach((i) => {
+                i.classList.remove("btn-dark");
+                i.classList.add("btn-outline-dark");
+            });
+
+            document.getElementById("palette-" + newPalette).classList.remove("btn-outline-dark");
+            document.getElementById("palette-" + newPalette).classList.add("btn-dark");
+        }
+
+        function processForFile(file) {
+            document.getElementById("loading").style.display = "";
+
+            document.getElementById("upload-btn").style.display = "none";
+            document.getElementById("upload-tooltip").style.display = "none";
+            document.getElementById("reload-btn").style.display = "";
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                document.getElementById("preview-hidden").src = reader.result;
+                document.getElementById("preview").src = reader.result;
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("when-imported").style.display = "";
+            }
+            reader.readAsDataURL(file);
+        }
+
+        window.onload = () => {
+            document.getElementById("uploader").onchange = () => {
+                if (document.getElementById("uploader").files.length === 1) {
+                    processForFile(document.getElementById("uploader").files[0]);
+                } else {
+                    document.getElementById("loading").style.display = "none";
+                    document.getElementById("when-imported").style.display = "none";
+                }
+            }
+        }
+
+        document.ondragover = (event) => {
+            event.preventDefault();
+            return false;
+        }
+
+        document.ondrop = (event) => {
+            event.preventDefault();
+
+            if (event.dataTransfer.items) {
+                if ([...event.dataTransfer.items][0]) {
+                    let item = [...event.dataTransfer.items][0];
+                    if (item.kind === 'file') {
+                        processForFile(item.getAsFile());
+                    }
+                }
+            } else {
+                processForFile([...event.dataTransfer.files][0]);
+            }
+
+            return false;
+        }
+    </script>
+    <style>
+        @media (max-width: 700px) {
+            #images {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<input type="file" id="uploader" style="display: none;" accept="image/png, image/jpg, image/webp">
+<div class="container">
+    <br>
+    <br>
+
+    <h1>ManePlace Template Generator</h1>
+    <p>This page takes an image from your device and converts it into a pixel art that can be used on ManePlace. You can
+        then download the generated image.</p>
+
+    <button id="upload-btn" onclick="openUploader();" class="btn btn-primary" style="vertical-align: middle;">Import an
+        image file
+    </button>
+    <span id="upload-tooltip" class="text-muted" style="padding-left: 5px; vertical-align: middle;">or drop an image file here</span>
+    <button id="reload-btn" onclick="location.reload();" class="btn btn-outline-secondary" style="display: none;">Start
+        over
+    </button>
+
+    <div id="loading" style="display: none; margin-top: 10px;">
+        Please wait...
+    </div>
+
+    <div id="when-imported" style="display: none; margin-top: 10px;">
+        <div id="images" style="display: grid; grid-template-columns: repeat(2, 1fr); grid-gap: 20px;">
+            <div id="imported" style="width: 100%; text-align: center;">
+                <b>Imported Image</b><br>
+                <img id="preview" style="width: 100%;">
+                <img id="preview-hidden" style="width: 100%; position: fixed; pointer-events: none; opacity: 0;">
+            </div>
+            <div id="settings" style="width: 100%; text-align: center;">
+                <b>Preferences</b><br>
+
+                <div style="margin-top: 10px; margin-bottom: 10px;">
+                    Scale:<br>
+                    <div class="btn-group">
+                        <button onclick="setCanvasScale(10);" id="scale-10" class="scale-option btn btn-outline-dark">
+                            10
+                        </button>
+                        <button onclick="setCanvasScale(9);" id="scale-9" class="scale-option btn btn-outline-dark">9
+                        </button>
+                        <button onclick="setCanvasScale(8);" id="scale-8" class="scale-option btn btn-outline-dark">8
+                        </button>
+                        <button onclick="setCanvasScale(7);" id="scale-7" class="scale-option btn btn-outline-dark">7
+                        </button>
+                        <button onclick="setCanvasScale(6);" id="scale-6" class="scale-option btn btn-outline-dark">6
+                        </button>
+                        <button onclick="setCanvasScale(5);" id="scale-5" class="scale-option btn btn-dark">5</button>
+                        <button onclick="setCanvasScale(4);" id="scale-4" class="scale-option btn btn-outline-dark">4
+                        </button>
+                        <button onclick="setCanvasScale(3);" id="scale-3" class="scale-option btn btn-outline-dark">3
+                        </button>
+                        <button onclick="setCanvasScale(2);" id="scale-2" class="scale-option btn btn-outline-dark">2
+                        </button>
+                        <button onclick="setCanvasScale(1);" id="scale-1" class="scale-option btn btn-outline-dark">1
+                        </button>
+                    </div>
+                </div>
+
+                <div style="margin-top: 10px; margin-bottom: 10px;">
+                    Palette:<br>
+                    <div class="btn-group">
+                        <button onclick="setPalette(5);" id="palette-5"
+                                class="palette-option btn btn-dark">Full
+                        </button>
+                        <button onclick="setPalette(4);" id="palette-4" class="palette-option btn btn-outline-dark">Legacy
+                        </button>
+                        <button onclick="setPalette(3);" id="palette-3" class="palette-option btn btn-outline-dark">
+                            Original
+                        </button>
+                        <button onclick="setPalette(2);" id="palette-2" class="palette-option btn btn-outline-dark">
+                            Reduced
+                        </button>
+                        <button onclick="setPalette(1);" id="palette-1" class="palette-option btn btn-outline-dark">
+                            Grayscale
+                        </button>
+                    </div>
+                </div>
+
+                <div style="margin-top: 10px; margin-bottom: 10px;">
+                    Maximum resolution:<br>
+                    <div class="btn-group">
+                        <button onclick="setResolution(-1);" id="resolution--1" class="resolution-option btn btn-dark">
+                            Unlimited
+                        </button>
+                        <button onclick="setResolution(1440);" id="resolution-1440"
+                                class="resolution-option btn btn-outline-dark">1440h
+                        </button>
+                        <button onclick="setResolution(1080);" id="resolution-1080"
+                                class="resolution-option btn btn-outline-dark">1080h
+                        </button>
+                        <button onclick="setResolution(720);" id="resolution-720"
+                                class="resolution-option btn btn-outline-dark">720h
+                        </button>
+                        <button onclick="setResolution(480);" id="resolution-480"
+                                class="resolution-option btn btn-outline-dark">480h
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick='document.getElementById("loading").style.display = "";document.getElementById("when-imported").style.display = "none";generate();'
+                        class="btn btn-success">Generate
+                </button>
+            </div>
+            <div id="generated" style="text-align: center;display:none;">
+                <b>Generated Image</b><br>
+                <canvas id="result" style="width: 100%;"></canvas>
+            </div>
+        </div>
+
+        <a href="" id="download" class="btn btn-success"
+           style="margin-left: auto;margin-right: auto;display: none;margin-top: 10px;width:max-content;">Download
+            generated image</a>
+    </div>
+</div>
+</body>
+</html>
